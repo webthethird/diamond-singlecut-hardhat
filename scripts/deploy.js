@@ -7,18 +7,6 @@ async function deployDiamond () {
   const accounts = await ethers.getSigners()
   const contractOwner = accounts[0]
 
-  // deploy DiamondCutFacet
-  const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet')
-  const diamondCutFacet = await DiamondCutFacet.deploy()
-  await diamondCutFacet.deployed()
-  console.log('DiamondCutFacet deployed:', diamondCutFacet.address)
-
-  // deploy Diamond
-  const Diamond = await ethers.getContractFactory('Diamond')
-  const diamond = await Diamond.deploy(contractOwner.address, diamondCutFacet.address)
-  await diamond.deployed()
-  console.log('Diamond deployed:', diamond.address)
-
   // deploy DiamondInit
   // DiamondInit provides a function that is called when the diamond is upgraded to initialize state variables
   // Read about how the diamondCut function works here: https://eips.ethereum.org/EIPS/eip-2535#addingreplacingremoving-functions
@@ -32,7 +20,9 @@ async function deployDiamond () {
   console.log('Deploying facets')
   const FacetNames = [
     'DiamondLoupeFacet',
-    'OwnershipFacet'
+    'OwnershipFacet',
+    // 'Test1Facet',  // cannot add this facet w/o removing the `supportsInterface()` function (also defined in DiamondLoupeFacet)
+    'Test2Facet'
   ]
   const cut = []
   for (const FacetName of FacetNames) {
@@ -47,21 +37,30 @@ async function deployDiamond () {
     })
   }
 
-  // upgrade diamond with facets
-  console.log('')
-  console.log('Diamond Cut:', cut)
-  const diamondCut = await ethers.getContractAt('IDiamondCut', diamond.address)
-  let tx
-  let receipt
   // call to init function
   let functionCall = diamondInit.interface.encodeFunctionData('init')
-  tx = await diamondCut.diamondCut(cut, diamondInit.address, functionCall)
+  // deploy Diamond with facets
+  console.log('')
+  console.log('Diamond Cut:', cut)
+  const Diamond = await ethers.getContractFactory('Diamond')
+  const diamond = await Diamond.deploy(contractOwner.address, diamondInit.address, functionCall, cut)
+  await diamond.deployed()
+  console.log('Diamond deployed:', diamond.address)
+
+  let tx
+  let receipt
+  // call to test function
+  const test2Facet = await ethers.getContractAt('Test2Facet', diamond.address)
+  tx = await test2Facet.test2Func1()
   console.log('Diamond cut tx: ', tx.hash)
   receipt = await tx.wait()
   if (!receipt.status) {
-    throw Error(`Diamond upgrade failed: ${tx.hash}`)
+    throw Error(`Diamond test function call failed: ${tx.hash}`)
   }
-  console.log('Completed diamond cut')
+  else {
+    console.log(`Test function call returned ${receipt.status}`)
+  }
+  console.log('Completed single-cut diamond deployment')
   return diamond.address
 }
 

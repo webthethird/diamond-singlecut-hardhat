@@ -1,6 +1,6 @@
-# Diamond-1-Hardhat Implementation
+# Diamond-SingleCut-Hardhat Implementation
 
-This is a reference implementation for [EIP-2535 Diamonds](https://github.com/ethereum/EIPs/issues/2535). To learn about other implementations go here: https://github.com/mudgen/diamond
+This is a reference implementation for an immutable [EIP-2535 Diamond](https://github.com/ethereum/EIPs/issues/2535). To learn about other implementations go here: https://github.com/mudgen/diamond
 
 **Note:** The loupe functions in DiamondLoupeFacet.sol MUST be added to a diamond and are required by the EIP-2535 Diamonds standard.
 
@@ -11,12 +11,12 @@ This is a reference implementation for [EIP-2535 Diamonds](https://github.com/et
 
 1. Clone this repo:
 ```console
-git clone git@github.com:mudgen/diamond-1-hardhat.git
+git clone git@github.com:webthethird/diamond-singlecut-hardhat.git
 ```
 
 2. Install NPM packages:
 ```console
-cd diamond-1-hardhat
+cd diamond-singlecut-hardhat
 npm install
 ```
 
@@ -28,11 +28,10 @@ npx hardhat run scripts/deploy.js
 
 ### How the scripts/deploy.js script works
 
-1. DiamondCutFacet is deployed.
-1. The diamond is deployed, passing as arguments to the diamond constructor the owner address of the diamond and the DiamondCutFacet address. DiamondCutFacet has the `diamondCut` external function which is used to upgrade the diamond to add more functions.
 1. The `DiamondInit` contract is deployed. This contains an `init` function which is called on the first diamond upgrade to initialize state of some state variables. Information on how the `diamondCut` function works is here: https://eips.ethereum.org/EIPS/eip-2535#diamond-interface
-1. Facets are deployed.
-1. The diamond is upgraded. The `diamondCut` function is used to add functions from facets to the diamond. In addition the `diamondCut` function calls the `init` function from the `DiamondInit` contract using `delegatecall` to initialize state variables.
+2. Facets are deployed. _Note: this single-cut implementation does not deploy a `DiamondCut` facet, so all facets must be deployed before the diamond itself._
+3. The diamond is deployed, passing as arguments to the diamond constructor the owner address of the diamond, the `DiamondInit` contract address, the `calldata` to pass along to the `init` function, and an array of `FacetCut` structs containing all the necessary data for adding all of the facets in the constructor.
+4. A function call is made to the `test2Func1` function in the `Test2Facet` contract
 
 How a diamond is deployed is not part of the EIP-2535 Diamonds standard. This implementation shows a usable example. 
 
@@ -43,9 +42,7 @@ npx hardhat test
 
 ## Upgrade a diamond
 
-Check the `scripts/deploy.js` and or the `test/diamondTest.js` file for examples of upgrades.
-
-Note that upgrade functionality is optional. It is possible to deploy a diamond that can't be upgraded, which is a 'Single Cut Diamond'.  It is also possible to deploy an upgradeable diamond and at a later date remove its `diamondCut` function so it can't be upgraded any more.
+Note that upgrade functionality is optional. This reference implementation deploys a diamond that can't be upgraded, which is a 'Single Cut Diamond'.  It is also possible to deploy an upgradeable diamond and at a later date remove its `diamondCut` function so it can't be upgraded any more.
 
 Note that any number of functions from any number of facets can be added/replaced/removed on a diamond in a single transaction. In addition an initialization function can be executed in the same transaction as an upgrade to initialize any state variables required for an upgrade. This 'everything done in a single transaction' capability ensures a diamond maintains a correct and consistent state during upgrades.
 
@@ -55,9 +52,7 @@ Note that any number of functions from any number of facets can be added/replace
 
 However the `facetAddress` loupe function is gas efficient and can be called in on-chain transactions.
 
-The `contracts/Diamond.sol` file shows an example of implementing a diamond.
-
-The `contracts/facets/DiamondCutFacet.sol` file shows how to implement the `diamondCut` external function.
+The `contracts/Diamond.sol` file shows an example of implementing a **single-cut** diamond.
 
 The `contracts/facets/DiamondLoupeFacet.sol` file shows how to implement the four standard loupe functions.
 
@@ -73,9 +68,9 @@ The `test/diamondTest.js` file gives tests for the `diamondCut` function and the
 
 2. Use a diamond reference implementation. You are at the right place because this is the README for a diamond reference implementation.
 
-This diamond implementation is boilerplate code that makes a diamond compliant with EIP-2535 Diamonds.
+This diamond implementation is boilerplate code that makes a single-cut diamond compliant with EIP-2535 Diamonds.
 
-Specifically you can copy and use the [DiamondCutFacet.sol](./contracts/facets/DiamondCutFacet.sol) and [DiamondLoupeFacet.sol](./contracts/facets/DiamondLoupeFacet.sol) contracts. They implement the `diamondCut` function and the loupe functions.
+Specifically you can copy and use the [DiamondLoupeFacet.sol](./contracts/facets/DiamondLoupeFacet.sol) contract, which implements the required loupe functions.
 
 The [Diamond.sol](./contracts/Diamond.sol) contract could be used as is, or it could be used as a starting point and customized. This contract is the diamond. Its deployment creates a diamond. It's address is a stable diamond address that does not change.
 
